@@ -47,7 +47,7 @@ for sedcmd in $SED_COMMANDS ; do
 			cp res/make-versions-input-$i.txt Dockerfile
 
 			# Remove any output file
-			rm PhenoMeNal_Versions.txt
+			rm -f PhenoMeNal_Versions.txt
 
 			# Run script
 			../make-versions-file
