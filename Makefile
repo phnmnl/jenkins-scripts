@@ -5,4 +5,4 @@ test:
 
 clean:
 
-.PHONY: all clean
+.PHONY: all clean test

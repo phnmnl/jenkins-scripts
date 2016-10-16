@@ -14,4 +14,4 @@ if [ -z "$MAKE_VERSIONS_SED" ] ; then
 	MAKE_VERSIONS_SED=sed
 fi
 
-$MAKE_VERSIONS_GREP '^ENV .*_VERSION*' Dockerfile | $MAKE_VERSIONS_SED -e 's/^ENV \(.*_VERSION.*\)$/\1/' >PhenoMeNal_Versions.txt
+$MAKE_VERSIONS_GREP '^[[:space:]]*ENV[[:space:]]*[A-Z]*_VERSION*' Dockerfile | $MAKE_VERSIONS_SED -e 's/^[[:space:]]*ENV[[:space:]]*\([A-Z]*_VERSION\)[[:space:]]*=[[:space:]]*\(.*\)$/\1=\2/' >PhenoMeNal_Versions.txt
