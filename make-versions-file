@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Test presence of Dockerfile
+if [ ! -f Dockerfile ] ; then
+	echo "No Dockerfile !" >&2
+	exit 1
+fi
+
+# Set grep & sed commands
+if [ -z "$MAKE_VERSIONS_GREP" ] ; then
+	MAKE_VERSIONS_GREP=grep
+fi
+if [ -z "$MAKE_VERSIONS_SED" ] ; then
+	MAKE_VERSIONS_SED=sed
+fi
+
+$MAKE_VERSIONS_GREP '^ENV .*_VERSION*' Dockerfile | $MAKE_VERSIONS_SED -e 's/^ENV \(.*_VERSION.*\)$/\1/' >PhenoMeNal_Versions.txt

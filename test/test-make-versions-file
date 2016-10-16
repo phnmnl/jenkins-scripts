@@ -1,0 +1,68 @@
+#!/bin/bash
+
+# Sed command to test
+GREP_COMMANDS=grep
+SED_COMMANDS=sed
+
+# Are we on macOS and do we have GNU commands installed ?
+os=$(uname)
+if [ "$os" = "Darwin" ] ; then
+
+	# Add GNU grep to grep commands to test
+	if which -s ggrep ; then
+		GREP_COMMANDS="$GREP_COMMANDS ggrep"
+	else 
+		echo "Please install GNU grep for testing, by running 'brew tap homebrew/dupes ; brew install grep'." >&2
+		exit 1
+	fi
+
+	# Add GNU sed to sed commands to test
+	if which -s gsed ; then
+		SED_COMMANDS="$SED_COMMANDS gsed"
+	else 
+		echo "Please install GNU sed for testing, by running 'brew install gnu-sed'." >&2
+		exit 1
+	fi
+fi
+
+# Get number of input test files
+n=$(ls -1 res/make-versions-input*.txt | wc -l)
+
+# Loop on sed commands
+for sedcmd in $SED_COMMANDS ; do
+	export MAKE_VERSIONS_SED=$sedcmd
+
+	# Loop on grep commands
+	for grepcmd in $GREP_COMMANDS ; do
+		export MAKE_VERSIONS_GREP=$grepcmd
+
+		echo "Testing with $sedcmd and $grepcmd commands:"
+
+		# Loop on all test inputs
+		for ((i = 1 ; i <= n ; ++i)) ; do
+
+			echo "Testing with input file \"res/make-versions-input-$i.txt\"."
+
+			# Copy input locally
+			cp res/make-versions-input-$i.txt Dockerfile
+
+			# Remove any output file
+			rm PhenoMeNal_Versions.txt
+
+			# Run script
+			../make-versions-file
+
+			# Test if output file has been written
+			if [ ! -f PhenoMeNal_Versions.txt ] ; then
+				echo "Missing output file PhenoMeNal_Versions.txt !" >&2
+				exit 1
+			fi
+
+			# Test that output file content is correct
+			if ! diff PhenoMeNal_Versions.txt res/make-versions-output-$i.txt ; then
+				echo "Output file PhenoMeNal_Versions.txt is different from reference file res/make-versions-output-$i.txt !" >&2
+				exit 1
+			fi
+		done
+	done
+done
