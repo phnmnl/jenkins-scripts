@@ -7,7 +7,7 @@ POD=$POD_PREFIX"-"$NEW_UUID
 HELM_NAME=$POD_PREFIX"-"$NEW_UUID
 
 
-helm install phenomenal-helm/container-test --set container=$CONTAINER,pod_name=$POD,download_cmd=$DWNLD_CMD,test_cmd=$TEST_CMD --name $HELM_NAME
+helm install phenomenal-helm/container-test --version 0.1.1 --set container=$CONTAINER,pod_name=$POD,test_cmd=$TEST_CMD --name $HELM_NAME
 echo "Waiting for container to be started..."
 sleep 10
 result=`kubectl get pod $POD -o=yaml | grep 'phase' | awk -F ': ' '{ print $2 }'`
