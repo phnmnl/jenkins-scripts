@@ -1,32 +1,157 @@
 #!/bin/bash
 
+##################
+# Constants {{{1 #
+##################
+
+PROG_NAME=$(basename $0)
+YES=yes
+
+#########################
+# Global variables {{{1 #
+#########################
+
+DEBUG=0
+
 # Sed command to test
 GREP_COMMANDS=grep
 SED_COMMANDS=sed
 
-# Are we on macOS and do we have GNU commands installed ?
-os=$(uname)
-if [ "$os" = "Darwin" ] ; then
+###################
+# Print help {{{1 #
+###################
 
-	# Add GNU grep to grep commands to test
-	if which -s ggrep ; then
-		GREP_COMMANDS="$GREP_COMMANDS ggrep"
-	else 
-		echo "Please install GNU grep for testing, by running 'brew tap homebrew/dupes ; brew install grep'." >&2
-		exit 1
+function print_help {
+	echo "Usage: $PROG_NAME [options]"
+	echo
+	echo "   -g, --debug                Debug mode."
+	echo "   -h, --help                 Print this help message."
+}
+
+############
+# Msg {{{1 #
+############
+
+function msg {
+
+	local tag=$1
+	shift
+	local code_level=1
+	is_numeric=$(echo $1 | grep '^[0-9]*$')
+	if [ -n "$is_numeric" ] ; then
+		code_level=$1
+		shift
+	fi
+	local msg=$1
+
+	# Check tag
+	if [ -z "$tag" -o \( "$tag" != INFO -a "$tag" != DEBUG -a "$tag" != ERROR \) ] ; then
+		echo "ERROR: Unvalid message tag \"$tag\"." >&2
+		exit 999
 	fi
 
-	# Add GNU sed to sed commands to test
-	if which -s gsed ; then
-		SED_COMMANDS="$SED_COMMANDS gsed"
-	else 
-		echo "Please install GNU sed for testing, by running 'brew install gnu-sed'." >&2
-		exit 1
-	fi
-fi
+	# Print message
+	[ $tag = DEBUG -a $DEBUG -lt $code_level ] || echo "$tag: $msg" >&2
 
-# Get number of input test files
-n=$(ls -1 res/make-versions-input*.txt | wc -l)
+	# Exit
+	[ $tag = ERROR ] && exit $code_level
+}
+
+###################################################
+# Check for additional grep and sed commands {{{1 #
+###################################################
+
+function check_for_additional_grep_and_sed_commands {
+
+	# Are we on macOS and do we have GNU commands installed ?
+	os=$(uname)
+	if [ "$os" = "Darwin" ] ; then
+
+		# Add GNU grep to grep commands to test
+		if which -s ggrep ; then
+			GREP_COMMANDS="$GREP_COMMANDS ggrep"
+		else 
+			msg error "Please install GNU grep for testing, by running 'brew tap homebrew/dupes ; brew install grep'."
+		fi
+
+		# Add GNU sed to sed commands to test
+		if which -s gsed ; then
+			SED_COMMANDS="$SED_COMMANDS gsed"
+		else 
+			msg error "Please install GNU sed for testing, by running 'brew install gnu-sed'."
+		fi
+	fi
+}
+
+#################
+# Requires {{{1 #
+#################
+
+function requires {
+
+	local prg=$1
+
+	[ -n "$(which $prg)" ] || msg ERROR "Cannot find $prg. Please install required package."
+}
+
+###########################
+# Check requirements {{{1 #
+###########################
+
+function check_requirements {
+
+	# Loop on sed commands
+	for sedcmd in $SED_COMMANDS ; do
+		requires $sedcmd
+	done
+
+	# Loop on grep commands
+	for grepcmd in $GREP_COMMANDS ; do
+		requires $grepcmd
+	done
+
+	requires diff
+}
+
+############################
+# Test make versions {{{ 1 #
+############################
+
+function test_make_versions {
+
+	# Loop on all test inputs
+	for input in res/make-versions-input*.txt ; do
+
+		msg INFO "Testing with input file \"$input\"."
+
+		# Copy input locally
+		cp $input Dockerfile
+
+		# Remove any output file
+		rm -f PhenoMeNal_Versions.txt
+
+		# Run script
+		../make-versions-file
+
+		# Test if output file has been written
+		[ -f PhenoMeNal_Versions.txt ] || msg ERROR "Missing output file PhenoMeNal_Versions.txt !"
+
+		# Test that output file content is correct
+		output=$(echo $input | sed 's/input/output/')
+		[ -f $output ] || msg ERROR "Cannot find reference output file \"$output\"."
+		diff PhenoMeNal_Versions.txt $output || msg ERROR "Output file PhenoMeNal_Versions.txt is different from reference file $output !"
+	done
+}
+
+#############
+# MAIN {{{1 #
+#############
+
+# Other grep and sed programs
+check_for_additional_grep_and_sed_commands
+
+# Requirements
+check_requirements
 
 # Loop on sed commands
 for sedcmd in $SED_COMMANDS ; do
@@ -36,33 +161,9 @@ for sedcmd in $SED_COMMANDS ; do
 	for grepcmd in $GREP_COMMANDS ; do
 		export MAKE_VERSIONS_GREP=$grepcmd
 
-		echo "Testing with $sedcmd and $grepcmd commands:"
+		msg INFO "Testing with $sedcmd and $grepcmd commands:"
 
-		# Loop on all test inputs
-		for ((i = 1 ; i <= n ; ++i)) ; do
-
-			echo "Testing with input file \"res/make-versions-input-$i.txt\"."
-
-			# Copy input locally
-			cp res/make-versions-input-$i.txt Dockerfile
-
-			# Remove any output file
-			rm -f PhenoMeNal_Versions.txt
-
-			# Run script
-			../make-versions-file
-
-			# Test if output file has been written
-			if [ ! -f PhenoMeNal_Versions.txt ] ; then
-				echo "Missing output file PhenoMeNal_Versions.txt !" >&2
-				exit 1
-			fi
-
-			# Test that output file content is correct
-			if ! diff PhenoMeNal_Versions.txt res/make-versions-output-$i.txt ; then
-				echo "Output file PhenoMeNal_Versions.txt is different from reference file res/make-versions-output-$i.txt !" >&2
-				exit 1
-			fi
-		done
+		# Test make-versions
+		test_make_versions
 	done
 done
