@@ -1,4 +1,5 @@
 #!/bin/bash
+# vi: fdm=marker
 
 ##################
 # Constants {{{1 #
@@ -146,6 +147,9 @@ function test_make_versions {
 #############
 # MAIN {{{1 #
 #############
+
+# Read arguments
+read_args "$@"
 
 # Other grep and sed programs
 check_for_additional_grep_and_sed_commands
