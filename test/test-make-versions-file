@@ -120,28 +120,62 @@ function check_requirements {
 
 function test_make_versions {
 
+	local input=$1
+	local output=$2
+	local dockerfile=$3
+
+	msg INFO "Testing input file \"$input\" and Dockerfile \"$dockerfile\"."
+
+	[ -f $output ] || msg ERROR "Cannot find reference output file \"$output\"."
+	[ "$dockerfile" = Dockerfile ] || export MAKE_VERSIONS_DOCKERFILE=$dockerfile
+
+	# Copy input locally
+	local dir_path=$(dirname $dockerfile)
+	[ "$dir_path" = "." ] || mkdir -p $dir_path
+	cp $input $dockerfile
+
+	# Remove any output file
+	rm -f PhenoMeNal_Versions.txt
+
+	# Run script
+	../make-versions-file
+
+	# Test if output file has been written
+	[ -f PhenoMeNal_Versions.txt ] || msg ERROR "Missing output file PhenoMeNal_Versions.txt !"
+
+	# Test that output file content is correct
+	diff PhenoMeNal_Versions.txt $output || msg ERROR "Output file PhenoMeNal_Versions.txt is different from reference file $output !"
+
+	# Remove any custom Dockerfile path definition
+	[ "$dir_path" = "." ] || rm -r ${dir_path%%/*}
+	MAKE_VERSIONS_DOCKERFILE=
+}
+
+#############################
+# Test all input files {{{1 #
+#############################
+
+function test_all_input_files {
+
 	# Loop on all test inputs
 	for input in res/make-versions-input*.txt ; do
 
-		msg INFO "Testing with input file \"$input\"."
+		local output=$(echo $input | sed 's/input/output/')
 
-		# Copy input locally
-		cp $input Dockerfile
-
-		# Remove any output file
-		rm -f PhenoMeNal_Versions.txt
-
-		# Run script
-		../make-versions-file
-
-		# Test if output file has been written
-		[ -f PhenoMeNal_Versions.txt ] || msg ERROR "Missing output file PhenoMeNal_Versions.txt !"
-
-		# Test that output file content is correct
-		output=$(echo $input | sed 's/input/output/')
-		[ -f $output ] || msg ERROR "Cannot find reference output file \"$output\"."
-		diff PhenoMeNal_Versions.txt $output || msg ERROR "Output file PhenoMeNal_Versions.txt is different from reference file $output !"
+		test_make_versions $input $output Dockerfile
 	done
+}
+
+####################################
+# Test custom dockerfile path {{{1 #
+####################################
+
+function test_custom_dockerfile_path {
+
+	local input=$(ls -1 res/make-versions-input*.txt | head -n 1)
+	local output=$(echo $input | sed 's/input/output/')
+
+	test_make_versions $input $output some/custom/path/Dockerfile
 }
 
 #############
@@ -167,7 +201,8 @@ for sedcmd in $SED_COMMANDS ; do
 
 		msg INFO "Testing with $sedcmd and $grepcmd commands:"
 
-		# Test make-versions
-		test_make_versions
+		# Test
+		test_all_input_files
+		test_custom_dockerfile_path
 	done
 done

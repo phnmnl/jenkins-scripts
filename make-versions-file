@@ -8,12 +8,19 @@
 PROG_NAME=$(basename $0)
 YES=yes
 
-# Set grep & sed commands
+# Set grep command
 if [ -z "$MAKE_VERSIONS_GREP" ] ; then
 	MAKE_VERSIONS_GREP=grep
 fi
+
+# Set sed command
 if [ -z "$MAKE_VERSIONS_SED" ] ; then
 	MAKE_VERSIONS_SED=sed
+fi
+
+# Set Dockerfile path
+if [ -z "$MAKE_VERSIONS_DOCKERFILE" ] ; then
+	MAKE_VERSIONS_DOCKERFILE=Dockerfile
 fi
 
 ###################
@@ -69,10 +76,10 @@ function extract_versions {
 
 		# Look for lines containing version definition
 		for cmd in 'ENV' LABEL ; do
-			line=$($MAKE_VERSIONS_GREP "^[[:space:]]*$cmd[[:space:]]*$version_var" Dockerfile)
+			line=$($MAKE_VERSIONS_GREP "^[[:space:]]*$cmd[[:space:]]*$version_var" $MAKE_VERSIONS_DOCKERFILE)
 			[ -n "$line" ] && break
 		done
-		[ -n "$line" ] || msg ERROR "Cannot find definition of $version_var inside Dockerfile file."
+		[ -n "$line" ] || msg ERROR "Cannot find definition of $version_var inside $MAKE_VERSIONS_DOCKERFILE file."
 
 		# Extract definition of version variable
 		version_def=$(echo $line | $MAKE_VERSIONS_SED -e "s/^.*[[:space:]]*\($version_var\)[[:space:]]*=[[:space:]]*\(.*\)$/\1=\2/")
@@ -90,7 +97,7 @@ function extract_versions {
 #############
 
 # Test presence of Dockerfile
-[ -f Dockerfile ] || msg ERROR "No Dockerfile !"
+[ -f "$MAKE_VERSIONS_DOCKERFILE" ] || msg ERROR "No \"$MAKE_VERSIONS_DOCKERFILE\" file !"
 
 # Extract versions
 extract_versions
