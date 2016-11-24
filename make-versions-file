@@ -83,7 +83,7 @@ function extract_versions {
 			line=$($MAKE_VERSIONS_GREP "^[[:space:]]*$cmd[[:space:]]*$version_var" $MAKE_VERSIONS_DOCKERFILE)
 			[ -n "$line" ] && break
 		done
-		[ -n "$line" ] || msg ERROR "Cannot find definition of $version_var inside $MAKE_VERSIONS_DOCKERFILE file."
+		[ -n "$line" ] || msg INFO "Cannot find definition of $version_var inside $MAKE_VERSIONS_DOCKERFILE file."
 
 		# Extract definition of version variable
 		version_def=$(echo $line | $MAKE_VERSIONS_SED -e "s/^.*[[:space:]]*\($version_var\)[[:space:]]*=[[:space:]]*\(.*\)$/\1=\2/")
