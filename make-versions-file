@@ -61,7 +61,7 @@ function msg {
 	fi
 
 	# Print message
-	[ $tag = DEBUG -a $DEBUG -lt $code_level ] || echo "$tag: $msg" >&2
+	#[ $tag = DEBUG -a $DEBUG -lt $code_level ] || echo "$tag: $msg" >&2
 
 	# Exit
 	[ $tag = ERROR ] && exit $code_level
