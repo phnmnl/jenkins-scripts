@@ -37,7 +37,7 @@ function print_help {
 	echo "   MAKE_VERSIONS_DOCKERFILE   Set a custom Dockerfile path. By default Dockerfile is supposed to be inside the working directory."
 	echo "   MAKE_VERSIONS_GREP         Set custom grep command to use."
 	echo "   MAKE_VERSIONS_SED          Set custom sed command to use."
-
+}
 ############
 # Msg {{{1 #
 ############
