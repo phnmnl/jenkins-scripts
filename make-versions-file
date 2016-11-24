@@ -65,7 +65,7 @@ function extract_versions {
 	versions=()
 
 	# Loop on all version variables
-	for version_var in TOOL_VERSION CONTAINER_VERSION ; do
+	for version_var in TOOL_VERSION CONTAINER_VERSION version software.version ; do
 
 		# Look for lines containing version definition
 		for cmd in 'ENV' LABEL ; do
@@ -76,6 +76,7 @@ function extract_versions {
 
 		# Extract definition of version variable
 		version_def=$(echo $line | $MAKE_VERSIONS_SED -e "s/^.*[[:space:]]*\($version_var\)[[:space:]]*=[[:space:]]*\(.*\)$/\1=\2/")
+		version_def=$(echo $version_def | sed s/software\.version/TOOL_VERSION/ | sed s/version/CONTAINER_VERSION/)
 
 		# Add definiton to array
 		versions+=($version_def)
