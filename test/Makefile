@@ -1,5 +1,5 @@
 all:
-	./test-make-versions-file
+	./test-make-versions-file -g
 
 clean:
 

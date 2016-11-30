@@ -23,6 +23,12 @@ if [ -z "$MAKE_VERSIONS_DOCKERFILE" ] ; then
 	MAKE_VERSIONS_DOCKERFILE=Dockerfile
 fi
 
+#########################
+# Global variables {{{1 #
+#########################
+
+DEBUG=0
+
 ###################
 # Print help {{{1 #
 ###################
@@ -38,6 +44,7 @@ function print_help {
 	echo "   MAKE_VERSIONS_GREP         Set custom grep command to use."
 	echo "   MAKE_VERSIONS_SED          Set custom sed command to use."
 }
+
 ############
 # Msg {{{1 #
 ############
@@ -61,10 +68,39 @@ function msg {
 	fi
 
 	# Print message
-	#[ $tag = DEBUG -a $DEBUG -lt $code_level ] || echo "$tag: $msg" >&2
+	[ "$tag" = DEBUG -a "$DEBUG" -lt "$code_level" ] || echo "$tag: $msg" >&2
 
 	# Exit
 	[ $tag = ERROR ] && exit $code_level
+}
+
+##################
+# Read args {{{1 #
+##################
+
+function read_args {
+
+	local args="$*" # save arguments for debugging purpose
+	
+	# Read options
+	while true ; do
+		shift_count=1
+		case $1 in
+			-g|--debug)             DEBUG=$((DEBUG + 1)) ;;
+			-|--|--*)               error "Illegal option $1." ;;
+			-?)                     error "Unknown option $1." ;;
+			-[^-]*) split_opt=$(echo $1 | sed 's/^-//' | sed 's/\([a-zA-Z]\)/ -\1/g') ; set -- $1$split_opt "${@:2}" ;;
+			*) break
+		esac
+		shift $shift_count
+	done
+	shift $((OPTIND - 1))
+
+	# Read remaining arguments
+	[ $# -eq 0 ] || msg ERROR "No remaining argument is allowed."
+
+	# Debug
+	msg DEBUG 1 "Arguments are : $args"
 }
 
 #########################
@@ -100,6 +136,9 @@ function extract_versions {
 #############
 # MAIN {{{1 #
 #############
+
+# Read arguments
+read_args "$@"
 
 # Test presence of Dockerfile
 [ -f "$MAKE_VERSIONS_DOCKERFILE" ] || msg ERROR "No \"$MAKE_VERSIONS_DOCKERFILE\" file !"
