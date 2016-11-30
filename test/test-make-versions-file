@@ -71,6 +71,7 @@ function read_args {
 		shift_count=1
 		case $1 in
 			-g|--debug)             DEBUG=$((DEBUG + 1)) ;;
+			-h|--help)              print_help ; exit 0 ;;
 			-|--|--*)               error "Illegal option $1." ;;
 			-?)                     error "Unknown option $1." ;;
 			-[^-]*) split_opt=$(echo $1 | sed 's/^-//' | sed 's/\([a-zA-Z]\)/ -\1/g') ; set -- $1$split_opt "${@:2}" ;;

@@ -6,6 +6,7 @@
 ##################
 
 PROG_NAME=$(basename $0)
+VERSION=1.5
 YES=yes
 
 # Set grep command
@@ -38,6 +39,7 @@ function print_help {
 	echo
 	echo "   -g, --debug                Debug mode."
 	echo "   -h, --help                 Print this help message."
+	echo "   -v, --version              Print version."
 	echo
 	echo "Environment variables:"
 	echo "   MAKE_VERSIONS_DOCKERFILE   Set a custom Dockerfile path. By default Dockerfile is supposed to be inside the working directory."
@@ -87,6 +89,8 @@ function read_args {
 		shift_count=1
 		case $1 in
 			-g|--debug)             DEBUG=$((DEBUG + 1)) ;;
+			-h|--help)              print_help ; exit 0 ;;
+			-v|--version)           echo $VERSION ; exit 0 ;;
 			-|--|--*)               error "Illegal option $1." ;;
 			-?)                     error "Unknown option $1." ;;
 			-[^-]*) split_opt=$(echo $1 | sed 's/^-//' | sed 's/\([a-zA-Z]\)/ -\1/g') ; set -- $1$split_opt "${@:2}" ;;
