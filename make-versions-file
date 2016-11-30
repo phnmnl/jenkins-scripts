@@ -29,6 +29,8 @@ fi
 #########################
 
 DEBUG=0
+TAGPREFIX=
+OUTPUT_FILE=PhenoMeNal_Versions.txt
 
 ###################
 # Print help {{{1 #
@@ -39,6 +41,7 @@ function print_help {
 	echo
 	echo "   -g, --debug                Debug mode."
 	echo "   -h, --help                 Print this help message."
+	echo "   -t, --tag-prefix           Output container tag prefix."
 	echo "   -v, --version              Print version."
 	echo
 	echo "Environment variables:"
@@ -90,6 +93,7 @@ function read_args {
 		case $1 in
 			-g|--debug)             DEBUG=$((DEBUG + 1)) ;;
 			-h|--help)              print_help ; exit 0 ;;
+			-t|--tag-prefix)        TAGPREFIX=$YES ;;
 			-v|--version)           echo $VERSION ; exit 0 ;;
 			-|--|--*)               error "Illegal option $1." ;;
 			-?)                     error "Unknown option $1." ;;
@@ -157,7 +161,19 @@ function extract_versions {
 	done
 
 	# Output versions
-	printf "%s\n" "${versions[@]}" >PhenoMeNal_Versions.txt
+	printf "%s\n" "${versions[@]}" >$OUTPUT_FILE
+
+	# Add tag prefix
+	if [ -n "$TAGPREFIX" ] ; then
+		# Load written file
+		msg DEBUG "Sourcing written file \"$OUTPUT_FILE\"..."
+		source $OUTPUT_FILE
+		msg DEBUG "TOOL_VERSION=$TOOL_VERSION"
+		msg DEBUG "CONTAINER_VERSION=$CONTAINER_VERSION"
+
+		# Append tag prefix definition to the file
+	 	echo "CONTAINER_TAG_PREFIX=v${TOOL_VERSION}_cv${CONTAINER_VERSION}" >>$OUTPUT_FILE
+	fi
 }
 
 #############

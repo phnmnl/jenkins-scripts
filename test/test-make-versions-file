@@ -153,8 +153,9 @@ function test_make_versions {
 	local input=$1
 	local output=$2
 	local dockerfile=$3
+	local args=$4
 
-	msg INFO "Testing input file \"$input\" and Dockerfile \"$dockerfile\"."
+	msg INFO "Testing input file \"$input\", with output file \"$output\", using Dockerfile \"$dockerfile\" and arguments \"$args\"."
 
 	[ -f $output ] || msg ERROR "Cannot find reference output file \"$output\"."
 	[ "$dockerfile" = Dockerfile ] || export MAKE_VERSIONS_DOCKERFILE=$dockerfile
@@ -168,7 +169,9 @@ function test_make_versions {
 	rm -f PhenoMeNal_Versions.txt
 
 	# Run script
-	../make-versions-file -g
+	args+=" -g"
+	msg DEBUG "Running make-versions-file with arguments $args."
+	../make-versions-file $args
 
 	# Test if output file has been written
 	[ -f PhenoMeNal_Versions.txt ] || msg ERROR "Missing output file PhenoMeNal_Versions.txt !"
@@ -208,6 +211,18 @@ function test_custom_dockerfile_path {
 	test_make_versions $input $output some/custom/path/Dockerfile
 }
 
+########################
+# Test tag prefix {{{1 #
+########################
+
+function test_tag_prefix {
+
+	local input="res/make-versions-input-1.txt"
+	local output="res/make-versions-output-tag_prefix.txt"
+
+	test_make_versions $input $output Dockerfile -t
+}
+
 #############
 # MAIN {{{1 #
 #############
@@ -234,5 +249,6 @@ for sedcmd in $SED_COMMANDS ; do
 		# Test
 		test_all_input_files
 		test_custom_dockerfile_path
+		test_tag_prefix
 	done
 done
