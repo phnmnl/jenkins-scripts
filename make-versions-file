@@ -109,21 +109,44 @@ function read_args {
 
 function extract_versions {
 
-	versions=()
+	local versions=()
+	local TOOL_VERSION_names="TOOL_VERSION software.version"
+	local CONTAINER_VERSION_names="CONTAINER_VERSION version"
 
 	# Loop on all version variables
-	for version_var in TOOL_VERSION CONTAINER_VERSION version software.version ; do
+	for version_var in TOOL_VERSION CONTAINER_VERSION ; do
 
-		# Look for lines containing version definition
-		for cmd in 'ENV' LABEL ; do
-			line=$($MAKE_VERSIONS_GREP "^[[:space:]]*$cmd[[:space:]]*$version_var" $MAKE_VERSIONS_DOCKERFILE)
+		msg DEBUG 2 "Looking for variable $version_var..."
+		var_names=${version_var}_names
+		for version_var_name in ${!var_names} ; do
+
+			msg DEBUG 2 "Trying variable name $version_var_name..."
+
+			# Look for lines containing version definition
+			for cmd in 'ENV' LABEL ; do
+
+				msg DEBUG 2 "Trying command $cmd..."
+
+				line=$($MAKE_VERSIONS_GREP "^[[:space:]]*$cmd[[:space:]]*$version_var_name" $MAKE_VERSIONS_DOCKERFILE)
+				[ -n "$line" ] && break
+			done
+
+			# Leave as soon as we've found a match
 			[ -n "$line" ] && break
 		done
-		[ -n "$line" ] || msg INFO "Cannot find definition of $version_var inside $MAKE_VERSIONS_DOCKERFILE file."
+
+		msg DEBUG 2 "Found line \"$line\" for variable $version_var."
+
+		# Check we've found something
+		[ -n "$line" ] || msg ERROR "Cannot find definition of $version_var inside $MAKE_VERSIONS_DOCKERFILE file."
+
+		# Replace with right variable name
+		line=$(echo $line | $MAKE_VERSIONS_SED -e "s/$version_var_name/$version_var/")
+		msg DEBUG 2 "Replaced variable name: \"$line\"."
 
 		# Extract definition of version variable
 		version_def=$(echo $line | $MAKE_VERSIONS_SED -e "s/^.*[[:space:]]*\($version_var\)[[:space:]]*=[[:space:]]*\(.*\)$/\1=\2/")
-		version_def=$(echo $version_def | sed s/software\.version/TOOL_VERSION/ | sed s/version/CONTAINER_VERSION/)
+		msg DEBUG "New version variable definition: $version_def"
 
 		# Add definiton to array
 		versions+=($version_def)
