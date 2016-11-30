@@ -30,6 +30,7 @@ fi
 
 DEBUG=0
 TAGPREFIX=
+BRANCHTAG=
 OUTPUT_FILE=PhenoMeNal_Versions.txt
 
 ###################
@@ -39,6 +40,7 @@ OUTPUT_FILE=PhenoMeNal_Versions.txt
 function print_help {
 	echo "Usage: $PROG_NAME [options]"
 	echo
+	echo "   -b, --branch-tag           Use git branch for building container tag prefix. If branch is \"develop\", container tag prefix will be prefixed with \"dev_\"."
 	echo "   -g, --debug                Debug mode."
 	echo "   -h, --help                 Print this help message."
 	echo "   -t, --tag-prefix           Output container tag prefix."
@@ -91,12 +93,13 @@ function read_args {
 	while true ; do
 		shift_count=1
 		case $1 in
+			-b|--branch-tag)        BRANCHTAG=$YES ;;
 			-g|--debug)             DEBUG=$((DEBUG + 1)) ;;
 			-h|--help)              print_help ; exit 0 ;;
 			-t|--tag-prefix)        TAGPREFIX=$YES ;;
 			-v|--version)           echo $VERSION ; exit 0 ;;
-			-|--|--*)               error "Illegal option $1." ;;
-			-?)                     error "Unknown option $1." ;;
+			-|--|--*)               msg ERROR "Illegal option $1." ;;
+			-?)                     msg ERROR "Unknown option $1." ;;
 			-[^-]*) split_opt=$(echo $1 | sed 's/^-//' | sed 's/\([a-zA-Z]\)/ -\1/g') ; set -- $1$split_opt "${@:2}" ;;
 			*) break
 		esac
@@ -165,14 +168,26 @@ function extract_versions {
 
 	# Add tag prefix
 	if [ -n "$TAGPREFIX" ] ; then
+
 		# Load written file
 		msg DEBUG "Sourcing written file \"$OUTPUT_FILE\"..."
 		source $OUTPUT_FILE
 		msg DEBUG "TOOL_VERSION=$TOOL_VERSION"
 		msg DEBUG "CONTAINER_VERSION=$CONTAINER_VERSION"
 
+		# Get git branch
+		if [ -n "$BRANCHTAG" ] ; then
+			git=$(which git)
+			if [ -n "$git" ] ; then
+				branch=$(git status | grep "On branch" | sed 's/^On branch //')
+				if [ "$branch" = develop ] ; then
+					BRANCH_PREFIX=dev_
+				fi
+			fi
+		fi
+
 		# Append tag prefix definition to the file
-	 	echo "CONTAINER_TAG_PREFIX=v${TOOL_VERSION}_cv${CONTAINER_VERSION}" >>$OUTPUT_FILE
+	 	echo "CONTAINER_TAG_PREFIX=${BRANCH_PREFIX}v${TOOL_VERSION}_cv${CONTAINER_VERSION}" >>$OUTPUT_FILE
 	fi
 }
 

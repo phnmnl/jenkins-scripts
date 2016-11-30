@@ -72,8 +72,8 @@ function read_args {
 		case $1 in
 			-g|--debug)             DEBUG=$((DEBUG + 1)) ;;
 			-h|--help)              print_help ; exit 0 ;;
-			-|--|--*)               error "Illegal option $1." ;;
-			-?)                     error "Unknown option $1." ;;
+			-|--|--*)               msg ERROR "Illegal option $1." ;;
+			-?)                     msg ERROR "Unknown option $1." ;;
 			-[^-]*) split_opt=$(echo $1 | sed 's/^-//' | sed 's/\([a-zA-Z]\)/ -\1/g') ; set -- $1$split_opt "${@:2}" ;;
 			*) break
 		esac
@@ -154,16 +154,30 @@ function test_make_versions {
 	local output=$2
 	local dockerfile=$3
 	local args=$4
+	local branch=$5
 
 	msg INFO "Testing input file \"$input\", with output file \"$output\", using Dockerfile \"$dockerfile\" and arguments \"$args\"."
 
 	[ -f $output ] || msg ERROR "Cannot find reference output file \"$output\"."
 	[ "$dockerfile" = Dockerfile ] || export MAKE_VERSIONS_DOCKERFILE=$dockerfile
 
+	# Create temp dir
+	rm -rf test-tmp
+	mkdir test-tmp
+	cd test-tmp
+
 	# Copy input locally
 	local dir_path=$(dirname $dockerfile)
 	[ "$dir_path" = "." ] || mkdir -p $dir_path
-	cp $input $dockerfile
+	cp ../$input $dockerfile
+
+	# Create git repos
+	git init
+	git add .
+	git commit -m "Init."
+	if [ -n "$branch" ] ; then
+		git checkout -b $branch
+	fi
 
 	# Remove any output file
 	rm -f PhenoMeNal_Versions.txt
@@ -171,17 +185,20 @@ function test_make_versions {
 	# Run script
 	args+=" -g"
 	msg DEBUG "Running make-versions-file with arguments $args."
-	../make-versions-file $args
+	../../make-versions-file $args
 
 	# Test if output file has been written
 	[ -f PhenoMeNal_Versions.txt ] || msg ERROR "Missing output file PhenoMeNal_Versions.txt !"
 
 	# Test that output file content is correct
-	diff PhenoMeNal_Versions.txt $output || msg ERROR "Output file PhenoMeNal_Versions.txt is different from reference file $output !"
+	diff PhenoMeNal_Versions.txt ../$output || msg ERROR "Output file PhenoMeNal_Versions.txt is different from reference file $output !"
 
 	# Remove any custom Dockerfile path definition
 	[ "$dir_path" = "." ] || rm -r ${dir_path%%/*}
 	MAKE_VERSIONS_DOCKERFILE=
+
+	# Leave temp dir
+	cd ..
 }
 
 #############################
@@ -223,6 +240,18 @@ function test_tag_prefix {
 	test_make_versions $input $output Dockerfile -t
 }
 
+################################
+# Test tag prefix develop {{{1 #
+################################
+
+function test_tag_prefix_develop {
+
+	local input="res/make-versions-input-1.txt"
+	local output="res/make-versions-output-tag_prefix_dev.txt"
+
+	test_make_versions $input $output Dockerfile -tb develop
+}
+
 #############
 # MAIN {{{1 #
 #############
@@ -250,5 +279,6 @@ for sedcmd in $SED_COMMANDS ; do
 		test_all_input_files
 		test_custom_dockerfile_path
 		test_tag_prefix
+		test_tag_prefix_develop
 	done
 done
