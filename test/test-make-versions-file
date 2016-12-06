@@ -1,16 +1,15 @@
 #!/bin/bash
 # vi: fdm=marker
 
-##################
-# Constants {{{1 #
-##################
+# Constants {{{1
+################################################################
 
 PROG_NAME=$(basename $0)
 YES=yes
+DETACHED=detached
 
-#########################
-# Global variables {{{1 #
-#########################
+# Global variables {{{1
+################################################################
 
 DEBUG=0
 
@@ -18,9 +17,8 @@ DEBUG=0
 GREP_COMMANDS=grep
 SED_COMMANDS=sed
 
-###################
-# Print help {{{1 #
-###################
+# Print help {{{1
+################################################################
 
 function print_help {
 	echo "Usage: $PROG_NAME [options]"
@@ -29,9 +27,8 @@ function print_help {
 	echo "   -h, --help                 Print this help message."
 }
 
-############
-# Msg {{{1 #
-############
+# Msg {{{1
+################################################################
 
 function msg {
 
@@ -58,9 +55,8 @@ function msg {
 	[ $tag = ERROR ] && exit $code_level
 }
 
-##################
-# Read args {{{1 #
-##################
+# Read args {{{1
+################################################################
 
 function read_args {
 
@@ -88,9 +84,8 @@ function read_args {
 	msg DEBUG 1 "Arguments are : $args"
 }
 
-###################################################
-# Check for additional grep and sed commands {{{1 #
-###################################################
+# Check for additional grep and sed commands {{{1
+################################################################
 
 function check_for_additional_grep_and_sed_commands {
 
@@ -114,9 +109,8 @@ function check_for_additional_grep_and_sed_commands {
 	fi
 }
 
-#################
-# Requires {{{1 #
-#################
+# Requires {{{1
+################################################################
 
 function requires {
 
@@ -125,9 +119,8 @@ function requires {
 	[ -n "$(which $prg)" ] || msg ERROR "Cannot find $prg. Please install required package."
 }
 
-###########################
-# Check requirements {{{1 #
-###########################
+# Check requirements {{{1
+################################################################
 
 function check_requirements {
 
@@ -144,9 +137,8 @@ function check_requirements {
 	requires diff
 }
 
-############################
-# Test make versions {{{ 1 #
-############################
+# Test make versions {{{1
+################################################################
 
 function test_make_versions {
 
@@ -176,7 +168,14 @@ function test_make_versions {
 	git add .
 	git commit -m "Init."
 	if [ -n "$branch" ] ; then
-		git checkout -b $branch
+		if [ "$branch" = $DETACHED ] ; then
+			touch a.txt
+			git add .
+			git commit -m "New file."
+			git checkout HEAD^
+		else
+			git checkout -b $branch
+		fi
 	fi
 
 	# Remove any output file
@@ -185,7 +184,7 @@ function test_make_versions {
 	# Run script
 	args+=" -g"
 	msg DEBUG "Running make-versions-file with arguments $args."
-	../../make-versions-file $args
+	../../make-versions-file $args || msg ERROR "make-versions-file quit with error status $?."
 
 	# Test if output file has been written
 	[ -f PhenoMeNal_Versions.txt ] || msg ERROR "Missing output file PhenoMeNal_Versions.txt !"
@@ -201,9 +200,8 @@ function test_make_versions {
 	cd ..
 }
 
-#############################
-# Test all input files {{{1 #
-#############################
+# Test all input files {{{1
+################################################################
 
 function test_all_input_files {
 
@@ -216,9 +214,8 @@ function test_all_input_files {
 	done
 }
 
-####################################
-# Test custom dockerfile path {{{1 #
-####################################
+# Test custom dockerfile path {{{1
+################################################################
 
 function test_custom_dockerfile_path {
 
@@ -228,9 +225,8 @@ function test_custom_dockerfile_path {
 	test_make_versions $input $output some/custom/path/Dockerfile
 }
 
-########################
-# Test tag prefix {{{1 #
-########################
+# Test tag prefix {{{1
+################################################################
 
 function test_tag_prefix {
 
@@ -240,9 +236,8 @@ function test_tag_prefix {
 	test_make_versions $input $output Dockerfile -t
 }
 
-################################
-# Test tag prefix develop {{{1 #
-################################
+# Test tag prefix develop {{{1
+################################################################
 
 function test_tag_prefix_develop {
 
@@ -252,9 +247,19 @@ function test_tag_prefix_develop {
 	test_make_versions $input $output Dockerfile -tb develop
 }
 
-#############
-# MAIN {{{1 #
-#############
+# Test tag prefix detached {{{1
+################################################################
+
+function test_tag_prefix_detached {
+
+	local input="res/make-versions-input-1.txt"
+	local output="res/make-versions-output-tag_prefix.txt"
+
+	test_make_versions $input $output Dockerfile -tb $DETACHED
+}
+
+# MAIN {{{1
+################################################################
 
 # Read arguments
 read_args "$@"
@@ -280,5 +285,6 @@ for sedcmd in $SED_COMMANDS ; do
 		test_custom_dockerfile_path
 		test_tag_prefix
 		test_tag_prefix_develop
+		test_tag_prefix_detached
 	done
 done

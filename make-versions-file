@@ -79,6 +79,8 @@ function msg {
 
 	# Exit
 	[ $tag = ERROR ] && exit $code_level
+
+	return 0
 }
 
 ##################
