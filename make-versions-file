@@ -177,17 +177,23 @@ function extract_versions {
 
 		# Get git branch
 		if [ -n "$BRANCHTAG" ] ; then
+			msg DEBUG "Looking for git branch..."
 			git=$(which git)
 			if [ -n "$git" ] ; then
+				msg DEBUG "Found git as \"$git\"."
 				branch=$(git status | grep "On branch" | sed 's/^On branch //')
+				msg DEBUG "Current git branch is \"$branch\"."
 				if [ "$branch" = develop ] ; then
 					BRANCH_PREFIX=dev_
+					msg DEBUG "Adding prefix \"$BRANCH_PREFIX\" to tag."
 				fi
 			fi
 		fi
 
 		# Append tag prefix definition to the file
-	 	echo "CONTAINER_TAG_PREFIX=${BRANCH_PREFIX}v${TOOL_VERSION}_cv${CONTAINER_VERSION}" >>$OUTPUT_FILE
+		local VERSION_TAG="${BRANCH_PREFIX}v${TOOL_VERSION}_cv${CONTAINER_VERSION}"
+	 	echo "CONTAINER_TAG_PREFIX=$VERSION_TAG" >>$OUTPUT_FILE
+		msg DEBUG "CONTAINER_TAG_PREFIX=$VERSION_TAG"
 	fi
 }
 
