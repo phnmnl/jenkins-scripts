@@ -17,7 +17,8 @@ while [ "$result" = "Running" -o "$result" = "Pending" ]
 	sleep 10
 	result=`kubectl get pod $POD -o=yaml | grep 'phase' | awk -F ': ' '{ print $2 }'`
 done
-
+echo "Result was: $result"
+kubectl describe pods/$POD
 kubectl logs $POD
 
 helm delete $HELM_NAME
