@@ -189,6 +189,10 @@ function extract_versions {
 					BRANCH_PREFIX=dev_
 					msg DEBUG "Adding prefix \"$BRANCH_PREFIX\" to tag."
 				fi
+				if [[ $branch == release* ]] ; then
+					BRANCH_PREFIX=rc_
+					msg DEBUG "Adding prefix \"$BRANCH_PREFIX\" to tag."
+				fi
 			fi
 		fi
 

@@ -44,7 +44,7 @@ function msg {
 
 	# Check tag
 	if [ -z "$tag" -o \( "$tag" != INFO -a "$tag" != DEBUG -a "$tag" != ERROR \) ] ; then
-		echo "ERROR: Unvalid message tag \"$tag\"." >&2
+		echo "ERROR: Invalid message tag \"$tag\"." >&2
 		exit 999
 	fi
 
@@ -97,14 +97,14 @@ function check_for_additional_grep_and_sed_commands {
 		if which -s ggrep ; then
 			GREP_COMMANDS="$GREP_COMMANDS ggrep"
 		else 
-			msg error "Please install GNU grep for testing, by running 'brew tap homebrew/dupes ; brew install grep'."
+			msg ERROR "Please install GNU grep for testing, by running 'brew tap homebrew/dupes ; brew install grep'."
 		fi
 
 		# Add GNU sed to sed commands to test
 		if which -s gsed ; then
 			SED_COMMANDS="$SED_COMMANDS gsed"
 		else 
-			msg error "Please install GNU sed for testing, by running 'brew install gnu-sed'."
+			msg ERROR "Please install GNU sed for testing, by running 'brew install gnu-sed'."
 		fi
 	fi
 }
@@ -258,6 +258,17 @@ function test_tag_prefix_detached {
 	test_make_versions $input $output Dockerfile -tb $DETACHED
 }
 
+# Test tag prefix release* {{{1
+################################################################
+
+function test_tag_prefix_release {
+
+	local input="res/make-versions-input-1.txt"
+	local output="res/make-versions-output-tag_prefix_rc.txt"
+
+	test_make_versions $input $output Dockerfile -tb release/my_rel
+
+}
 # MAIN {{{1
 ################################################################
 
