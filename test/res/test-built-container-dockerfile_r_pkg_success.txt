@@ -1,0 +1,15 @@
+# vi: ft=dockerfile
+FROM ubuntu:14.04
+
+RUN echo "deb http://cran.univ-paris1.fr/bin/linux/ubuntu trusty/" >> /etc/apt/sources.list
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E084DAB9
+RUN apt-get update
+RUN apt-get -y upgrade
+RUN apt-get install --no-install-recommends -y r-base
+RUN apt-get install --no-install-recommends -y make
+RUN apt-get install --no-install-recommends -y g++
+RUN echo "r <- getOption('repos'); r['CRAN'] <- 'http://cran.us.r-project.org'; options(repos = r);" > ~/.Rprofile
+RUN R -e "install.packages('batch', dep=TRUE)"
+RUN R -e "source('http://www.bioconductor.org/biocLite.R'); biocLite('pcaMethods')"
+
+ENTRYPOINT ["ls"]
