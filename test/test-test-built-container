@@ -108,6 +108,7 @@ function test_test_built_container {
 	local success=$1
 	local dockerfile=$2
 	local cmds_file=$3
+	local dockername=$(basename $dockerfile | sed 's/\.[^.]*$//')
 
 	msg INFO "Testing test-built-container with Dockerfile \"$dockerfile\" and commands file \"$cmds_file\", and expecting $success."
 
@@ -121,21 +122,16 @@ function test_test_built_container {
 	[ -z "$cmds_file" ] || cp ../$cmds_file test_cmds.txt
 
 	# Build docker
-	if [ "$OS" = Darwin ] ; then
-		docker_machine=$(docker-machine status)
-		if [ "$docker_machine" = Stopped ] ; then
-			docker-machine start || msg ERROR "Cannot start docker-machine"
-		fi
-		eval $(docker-machine env)
-	fi
-	docker build -t dockertotest .
+	docker build -t $dockername .
 
 	# Run test
-	../../test-built-container dockertotest
+	../../test-built-container $dockername
+	status=$?
+	msg INFO "test-built-container returned status $status"
 	if [ "$success" = $SUCCESS ] ; then
-		[ $? -eq 0 ] || msg ERROR "test-built-container should return 0 as status."
+		[ $status -eq 0 ] || msg ERROR "test-built-container should return 0 as status."
 	else
-		[ $? -ne 0 ] || msg ERROR "test-built-container should return a non 0 status."
+		[ $status -ne 0 ] || msg ERROR "test-built-container should return a non 0 status."
 	fi
 
 	# Leave temp dir
@@ -148,9 +144,6 @@ function test_test_built_container {
 
 # Requirements
 requires docker
-if [ "$OS" = Darwin ] ; then
-	requires docker-machine
-fi
 
 # Read arguments
 read_args "$@"
@@ -163,3 +156,5 @@ test_test_built_container $SUCCESS res/test-built-container-dockerfile_sort.txt 
 test_test_built_container $SUCCESS res/test-built-container-dockerfile_ls.txt res/test-built-container-two_cmds.txt
 test_test_built_container $FAILURE res/test-built-container-dockerfile_false.txt
 test_test_built_container $FAILURE res/test-built-container-dockerfile_false.txt res/test-built-container-cmd_empty.txt
+test_test_built_container $FAILURE res/test-built-container-dockerfile_r_pkg_failure.txt
+test_test_built_container $SUCCESS res/test-built-container-dockerfile_r_pkg_success.txt

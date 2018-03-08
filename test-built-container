@@ -15,6 +15,7 @@ YES=yes
 DEBUG=0
 CONTAINER_IMAGE=
 CMDS_FILE=test_cmds.txt
+DOCKERFILE=
 
 ###################
 # Print help {{{1 #
@@ -94,13 +95,17 @@ function read_args {
 	[ $# -eq 1 ] || msg ERROR "You must set one, and only one, container image."
 	CONTAINER_IMAGE=$1
 
+	# Set dockerfile
+	if [[ -f Dockerfile ]] ; then
+		DOCKERFILE=Dockerfile
+	fi
+
 	# Debug
 	msg DEBUG 1 "Arguments are : $args"
 }
 
-########################
-# Test container {{{ 1 #
-########################
+# Test container {{{1
+################################################################
 
 function test_container {
 
@@ -110,12 +115,40 @@ function test_container {
 
 	[ -z "$entrypoint" ] || entrypoint_arg="--entrypoint=$1"
 
-	docker run $entrypoint_arg $CONTAINER_IMAGE $args || exit 1
+	if docker run $entrypoint_arg $CONTAINER_IMAGE $args ; then
+		msg INFO "Container $CONTAINER_IMAGE tested successfully."
+	else
+		msg INFO "Failure when testing container $CONTAINER_IMAGE."
+		exit 1
+	fi
+
+	return 0
 }
 
-#############
-# MAIN {{{1 #
-#############
+# Test R package loading {{{1
+################################################################
+
+function test_r_pkg_loading {
+
+	[[ -n $DOCKERFILE ]] || return 0
+
+	# Try to find package names in Dockerfile
+	r_packages=$(egrep 'install.packages|biocLite' $DOCKERFILE | sed -E 's/^.*(install.packages|biocLite)\((c\(.*\)|[^c][^,]*)[,)].*$/\2/' | sed -E 's/^c\((.*)\)$/\1/' | tr ',' "\n" | sed "s/['\" ]//g")
+
+	# Loop on all R packages
+	for pkg in $r_packages ; do
+		msg INFO "Try loading R package $pkg"
+		if docker run --entrypoint=R $CONTAINER_IMAGE -e "library('$pkg')" ; then
+			msg INFO "R package $pkg loaded successfully."
+		else
+			msg INFO "Failure while loading R package $pkg."
+			exit 2
+		fi
+	done
+}
+
+# MAIN {{{1
+################################################################
 
 # Requirements
 requires docker
@@ -123,8 +156,11 @@ requires docker
 # Read arguments
 read_args "$@"
 
-# Test
-if [ -f "$CMDS_FILE" ] ; then
+# Test loading of R packages if any
+test_r_pkg_loading
+
+# Test commands listed in file
+if [[ -f $CMDS_FILE && -s $CMDS_FILE ]] ; then
 	while read line ; do
 		has_entrypoint=$(echo $line | grep '^[^-]')
 		if [ -n "$has_entrypoint" ] ; then
@@ -136,6 +172,8 @@ if [ -f "$CMDS_FILE" ] ; then
 		fi
 		test_container "$entrypoint" "$args"
 	done <"$CMDS_FILE"
+
+# Test help option
 else
 	test_container "" -h
 fi
