@@ -1,0 +1,12 @@
+notifications:
+    email:
+        recipients:
+            - pk.roger@icloud.com
+                    
+sudo: required
+
+services:
+  - docker
+
+script:
+    - make test
