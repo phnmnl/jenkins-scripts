@@ -1,0 +1,151 @@
+#!/bin/bash
+# vi: fdm=marker
+
+# Constants {{{1
+################################################################
+
+PROG_NAME=$(basename $0)
+PROG_PATH=$(dirname $0)
+YES=yes
+NO=no
+CNTGLX_REPOS=container-galaxy-k8s-runtime
+CNTGLX_GITHUB=https://github.com/phnmnl/$CNTGLX_REPOS
+
+# Global variables {{{1
+################################################################
+
+WORKFLOW_FILE=
+WORKFLOW_NAME=
+GALAXY_API_KEY=${GALAXY_API_KEY:-}
+GALAXY_URL=${GALAXY_URL:-}
+CNTGLX_BRANCH=
+
+# Print help {{{1
+################################################################
+
+function print_help {
+	echo "Usage: $PROG_NAME [options]"
+	echo
+	echo "Run test on a PhenoMeNal workflow."
+	echo
+	echo "Options:"
+	echo "   -b, --cntglx-branch Set the branch to clone from $CNTGLX_REPOS repository."
+	echo "   -h, --help          Print this help message."
+	echo "   -k, --key           Set Galaxy API key."
+	echo "   -u, --url           Set Galaxy URL."
+	echo "   -w, --workflow      Set the workflow name to test."
+}
+
+# Error {{{1
+################################################################
+
+function error {
+
+	local msg=$1
+
+	echo "ERROR: $msg" >&2
+
+	exit 1
+}
+
+# Debug {{{1
+################################################################
+
+function debug {
+
+	local dbgmsg="$1"
+
+	[[ $DEBUG -ge 1 ]] && echo "[DEBUG] $dbgmsg" >&2
+}
+
+
+# Read args {{{1
+################################################################
+
+function read_args {
+
+	local args="$*" # save arguments for debugging purpose
+	
+	# Read options
+	while true ; do
+		shift_count=1
+		case $1 in
+			-b|--cntglx-branch) CNTGLX_BRANCH="$2" ; shift_count=2 ;;
+			-h|--help)          print_help ; exit 0 ;;
+			-k|--key)           GALAXY_API_KEY="$2" ; shift_count=2 ;;
+			-u|--url)           GALAXY_URL="$2" ; shift_count=2 ;;
+			-w|--name)          WORKFLOW_NAME="$2" ; shift_count=2 ;;
+			-) error "Illegal option $1." ;;
+			--) error "Illegal option $1." ;;
+			--*) error "Illegal option $1." ;;
+			-?) error "Unknown option $1." ;;
+			-[^-]*) split_opt=$(echo $1 | sed 's/^-//' | sed 's/\([a-zA-Z]\)/ -\1/g') ; set -- $1$split_opt "${@:2}" ;;
+			*) break
+		esac
+		shift $shift_count
+	done
+	shift $((OPTIND - 1))
+
+	# Read remaining arguments
+	[ $# -eq 0 ] || error "No remaining arguments are accepted."
+
+	# Check arguments
+	[[ -n $WORKFLOW_NAME ]] || error "You must provide a workflow name."
+	[[ -n $GALAXY_URL ]] || error "You must provide a URL to running Galaxy instance."
+	[[ -n $GALAXY_API_KEY ]] || error "You must provide a valid API key to the running Galaxy instance."
+	[[ -n $CNTGLX_BRANCH ]] || error "You must provide a valid branch for the $CNTGLX_REPOS repository."
+
+	# Debug
+	debug "Arguments are : $args"
+}
+
+# Clone container galaxy repos {{{1
+################################################################
+
+clone_cntglx_repos() {
+
+	rm -rf "$CNTGLX_REPOS"
+	git clone --depth 1 --single-branch -b "$CNTGLX_BRANCH" "$CNTGLX_GITHUB" || error "Cloning of branch \"$CNTGLX_BRANCH\" of repository \"$CNTGLX_GITHUB\" failed."
+}
+
+# Run test {{{1
+################################################################
+
+run_test() {
+	true
+}
+
+# Set workflow file {{{1
+################################################################
+
+set_workflow_file() {
+	WORKFLOW_FILE="$CNTGLX_REPOS/workflows/Galaxy-Workflow-$WORKFLOW_NAME.ga"
+	[[ -f "$WORKFLOW_FILE" ]] || error "No workflow file \"$WORKFLOW_FILE\" exists."
+}
+
+# Check workflow {{{1
+################################################################
+
+check_workflow() {
+
+	# Get UUID from .ga file
+	local uuid=$(grep uuid "$WORKFLOW_FILE" | head -n 1 | sed 's/^.*"uuid": "\([^"]*\)".*$/\1/')
+	[[ -n "$uuid" ]] || error "Cannot find UUID of workflow \"$WORKFLOW_NAME\"."
+
+	# Check that this workflow is in the running instance
+	# https://publicdev.phenomenal-h2020.eu/api/workflows?key=fa0d2fbe8112a5dfe1ed5350111b6f04&show_published=true
+	local is_in_instance=$(wget -q -O - "$GALAXY_URL/api/workflows?key=fa0d2fbe8112a5dfe1ed5350111b6f04&show_published=true" | grep "\"$uuid\"")
+	[[ -n "$is_in_instance" ]] || error "Workflow \"$WORKFLOW_NAME\" with UUID \"$uuid\" was not found inside running instance \"$GALAXY_URL\"."
+
+	echo "Found workflow \"$WORKFLOW_NAME\" with UUID \"$uuid\" in running instance \"$GALAXY_URL\"."
+}
+
+# Main {{{1
+################################################################
+
+read_args "$@"
+
+clone_cntglx_repos
+set_workflow_file
+check_workflow
+run_test
