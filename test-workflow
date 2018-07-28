@@ -112,7 +112,26 @@ clone_cntglx_repos() {
 ################################################################
 
 run_test() {
-	true
+
+	# Download wft4galaxy script
+	local wft4galaxy_branch='develop'
+	curl -s https://raw.githubusercontent.com/phnmnl/wft4galaxy/master/utils/docker/install.sh --branch $wft4galaxy_branch | bash /dev/stdin .
+	chmod +x wft4galaxy-docker
+	local wft4galaxy="$PWD/wft4galaxy-docker"
+
+	# Get YAML
+	local yaml_filename="$WORKFLOW_NAME-test.yml"
+	local yaml_filepath="$CNTGLX_REPOS/workflows-test-data/$yaml_filename"
+	[[ -f $yaml_filepath ]] || error "Unable to find test YAML file \"$yaml_filepath\"."
+	echo "Found YAML test file \"$yaml_filepath\"."
+
+	# Copy workflow file
+	local workflow_filename=$(grep 'file:' "$yaml_filepath" | head -n 1 | sed 's/^.*"\(.*\)".*$/\1/')
+	cp "$WORKFLOW_FILE" "$CNTGLX_REPOS/workflows-test-data/$workflow_filename"
+
+	# Call wft4galaxy
+	cd "$CNTGLX_REPOS/workflows-test-data"
+	"$wft4galaxy" -f "$yaml_filename" --debug
 }
 
 # Set workflow file {{{1
