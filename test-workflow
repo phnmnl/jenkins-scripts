@@ -15,10 +15,10 @@ CNTGLX_GITHUB=https://github.com/phnmnl/$CNTGLX_REPOS
 ################################################################
 
 WORKFLOW_FILE=
-WORKFLOW_NAME=
+WORKFLOW_NAME=${WORKFLOW_NAME:-}
 GALAXY_API_KEY=${GALAXY_API_KEY:-}
 GALAXY_URL=${GALAXY_URL:-}
-CNTGLX_BRANCH=
+CNTGLX_BRANCH=${CNTGLX_BRANCH:-}
 
 # Print help {{{1
 ################################################################
