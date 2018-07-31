@@ -10,6 +10,8 @@ YES=yes
 NO=no
 CNTGLX_REPOS=container-galaxy-k8s-runtime
 CNTGLX_GITHUB=https://github.com/phnmnl/$CNTGLX_REPOS
+WFT4GALAXY="$PWD/wft4galaxy-docker"
+WFT4GALAXY_BRANCH='develop'
 
 # Global variables {{{1
 ################################################################
@@ -114,10 +116,8 @@ clone_cntglx_repos() {
 run_test() {
 
 	# Download wft4galaxy script
-	local wft4galaxy_branch='develop'
-	curl -s https://raw.githubusercontent.com/phnmnl/wft4galaxy/master/utils/docker/install.sh --branch $wft4galaxy_branch | bash /dev/stdin .
-	chmod +x wft4galaxy-docker
-	local wft4galaxy="$PWD/wft4galaxy-docker"
+	curl -s https://raw.githubusercontent.com/phnmnl/wft4galaxy/master/utils/docker/install.sh --branch $WFT4GALAXY_BRANCH | bash /dev/stdin .
+	chmod +x "$WFT4GALAXY"
 
 	# Get YAML
 	local yaml_filename="$WORKFLOW_NAME-test.yml"
@@ -131,7 +131,7 @@ run_test() {
 
 	# Call wft4galaxy
 	cd "$CNTGLX_REPOS/workflows-test-data"
-	"$wft4galaxy" -f "$yaml_filename" --debug
+	"$WFT4GALAXY" -f "$yaml_filename" --debug
 }
 
 # Set workflow file {{{1
