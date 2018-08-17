@@ -116,7 +116,7 @@ clone_cntglx_repos() {
 run_test() {
 
 	# Download wft4galaxy script
-	curl -s https://raw.githubusercontent.com/phnmnl/wft4galaxy/master/utils/docker/install.sh --branch $WFT4GALAXY_BRANCH | bash /dev/stdin .
+	curl -s https://raw.githubusercontent.com/phnmnl/wft4galaxy/$WFT4GALAXY_BRANCH/utils/docker/install.sh | bash /dev/stdin .
 	chmod +x "$WFT4GALAXY"
 
 	# Get YAML
