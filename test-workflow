@@ -8,19 +8,23 @@ PROG_NAME=$(basename $0)
 PROG_PATH=$(dirname $0)
 YES=yes
 NO=no
-CNTGLX_REPOS=container-galaxy-k8s-runtime
-CNTGLX_GITHUB=https://github.com/phnmnl/$CNTGLX_REPOS
-WFT4GALAXY="$PWD/wft4galaxy-docker"
-WFT4GALAXY_BRANCH='develop'
+CNTGLX_REPOS_NAME=container-galaxy-k8s-runtime
+CNTGLX_GITHUB=https://github.com/phnmnl/$CNTGLX_REPOS_NAME
 
 # Global variables {{{1
 ################################################################
 
 WORKFLOW_FILE=
 WORKFLOW_NAME=${WORKFLOW_NAME:-}
-GALAXY_API_KEY=${GALAXY_API_KEY:-}
-GALAXY_URL=${GALAXY_URL:-}
+export GALAXY_API_KEY=${GALAXY_API_KEY:-}
+export GALAXY_URL=${GALAXY_URL:-}
 CNTGLX_BRANCH=${CNTGLX_BRANCH:-}
+WFT4GALAXY_DOCKER=$YES
+WFT4GALAXY_REPOS_NAME=wft4galaxy
+WFT4GALAXY_REPOS=phnmnl/$WFT4GALAXY_REPOS_NAME
+WFT4GALAXY_GITHUB=https://github.com/$WFT4GALAXY_REPOS
+WFT4GALAXY="$PWD/wft4galaxy-docker"
+WFT4GALAXY_BRANCH='develop'
 
 # Print help {{{1
 ################################################################
@@ -31,11 +35,12 @@ function print_help {
 	echo "Run test on a PhenoMeNal workflow."
 	echo
 	echo "Options:"
-	echo "   -b, --cntglx-branch Set the branch to clone from $CNTGLX_REPOS repository."
-	echo "   -h, --help          Print this help message."
-	echo "   -k, --key           Set Galaxy API key."
-	echo "   -u, --url           Set Galaxy URL."
-	echo "   -w, --workflow      Set the workflow name to test."
+	echo "   -b, --cntglx-branch        Set the branch to clone from $CNTGLX_REPOS_NAME repository."
+	echo "   -h, --help                 Print this help message."
+	echo "   -k, --key                  Set Galaxy API key."
+	echo "   -s, --wft4galaxy-sources   Use GitHub sources of wft4galaxy instead of docker."
+	echo "   -u, --url                  Set Galaxy URL."
+	echo "   -w, --workflow             Set the workflow name to test."
 }
 
 # Error {{{1
@@ -72,11 +77,12 @@ function read_args {
 	while true ; do
 		shift_count=1
 		case $1 in
-			-b|--cntglx-branch) CNTGLX_BRANCH="$2" ; shift_count=2 ;;
-			-h|--help)          print_help ; exit 0 ;;
-			-k|--key)           GALAXY_API_KEY="$2" ; shift_count=2 ;;
-			-u|--url)           GALAXY_URL="$2" ; shift_count=2 ;;
-			-w|--name)          WORKFLOW_NAME="$2" ; shift_count=2 ;;
+			-b|--cntglx-branch)         CNTGLX_BRANCH="$2" ; shift_count=2 ;;
+			-h|--help)                  print_help ; exit 0 ;;
+			-k|--key)                   GALAXY_API_KEY="$2" ; shift_count=2 ;;
+			-s|--wft4galaxy-sources)    WFT4GALAXY_DOCKER=$NO ;;
+			-u|--url)                   GALAXY_URL="$2" ; shift_count=2 ;;
+			-w|--name)                  WORKFLOW_NAME="$2" ; shift_count=2 ;;
 			-) error "Illegal option $1." ;;
 			--) error "Illegal option $1." ;;
 			--*) error "Illegal option $1." ;;
@@ -95,7 +101,7 @@ function read_args {
 	[[ -n $WORKFLOW_NAME ]] || error "You must provide a workflow name."
 	[[ -n $GALAXY_URL ]] || error "You must provide a URL to running Galaxy instance."
 	[[ -n $GALAXY_API_KEY ]] || error "You must provide a valid API key to the running Galaxy instance."
-	[[ -n $CNTGLX_BRANCH ]] || error "You must provide a valid branch for the $CNTGLX_REPOS repository."
+	[[ -n $CNTGLX_BRANCH ]] || error "You must provide a valid branch for the $CNTGLX_REPOS_NAME repository."
 
 	# Debug
 	debug "Arguments are : $args"
@@ -106,7 +112,7 @@ function read_args {
 
 clone_cntglx_repos() {
 
-	rm -rf "$CNTGLX_REPOS"
+	rm -rf "$CNTGLX_REPOS_NAME"
 	git clone --depth 1 --single-branch -b "$CNTGLX_BRANCH" "$CNTGLX_GITHUB" || error "Cloning of branch \"$CNTGLX_BRANCH\" of repository \"$CNTGLX_GITHUB\" failed."
 }
 
@@ -115,30 +121,52 @@ clone_cntglx_repos() {
 
 run_test() {
 
-	# Download wft4galaxy script
-	curl -s https://raw.githubusercontent.com/phnmnl/wft4galaxy/$WFT4GALAXY_BRANCH/utils/docker/install.sh | bash /dev/stdin .
-	chmod +x "$WFT4GALAXY"
-
 	# Get YAML
 	local yaml_filename="$WORKFLOW_NAME-test.yml"
-	local yaml_filepath="$CNTGLX_REPOS/workflows-test-data/$yaml_filename"
+	local yaml_filepath="$CNTGLX_REPOS_NAME/workflows-test-data/$yaml_filename"
 	[[ -f $yaml_filepath ]] || error "Unable to find test YAML file \"$yaml_filepath\"."
 	echo "Found YAML test file \"$yaml_filepath\"."
 
 	# Copy workflow file
 	local workflow_filename=$(grep 'file:' "$yaml_filepath" | head -n 1 | sed 's/^.*"\(.*\)".*$/\1/')
-	cp "$WORKFLOW_FILE" "$CNTGLX_REPOS/workflows-test-data/$workflow_filename"
+	cp "$WORKFLOW_FILE" "$CNTGLX_REPOS_NAME/workflows-test-data/$workflow_filename"
 
 	# Call wft4galaxy
-	cd "$CNTGLX_REPOS/workflows-test-data"
-	"$WFT4GALAXY" -f "$yaml_filename" --debug
+	cd "$CNTGLX_REPOS_NAME/workflows-test-data"
+	"$WFT4GALAXY" --server "$GALAXY_URL" --api-key "$GALAXY_API_KEY" -f "$yaml_filename" --debug
+}
+
+# Install wft4galaxy {{{1
+################################################################
+
+install_wft4galaxy() {
+
+	# Install docker
+	if [[ $WFT4GALAXY_DOCKER == $YES ]] ; then
+
+		curl -s https://raw.githubusercontent.com/$WFT4GALAXY_REPOS/$WFT4GALAXY_BRANCH/utils/docker/install.sh | bash /dev/stdin .
+		chmod +x "$WFT4GALAXY"
+
+	# install from sources
+	else
+
+		rm -rf "$WFT4GALAXY_REPOS_NAME"
+		git clone -b "$WFT4GALAXY_BRANCH" --depth 1 --single-branch "$WFT4GALAXY_GITHUB" || error "Cloning of branch \"$WFT4GALAXY_BRANCH\" of repository \"$WFT4GALAXY_GITHUB\" failed."
+		cd "$WFT4GALAXY_REPOS_NAME"
+		virtualenv venv
+		source venv/bin/activate
+		pip install -r requirements.txt
+		python setup.py install
+		WFT4GALAXY=wft4galaxy
+		cd ..
+	fi
 }
 
 # Set workflow file {{{1
 ################################################################
 
 set_workflow_file() {
-	WORKFLOW_FILE="$CNTGLX_REPOS/workflows/Galaxy-Workflow-$WORKFLOW_NAME.ga"
+	WORKFLOW_FILE="$CNTGLX_REPOS_NAME/workflows/Galaxy-Workflow-$WORKFLOW_NAME.ga"
 	[[ -f "$WORKFLOW_FILE" ]] || error "No workflow file \"$WORKFLOW_FILE\" exists."
 }
 
@@ -167,4 +195,5 @@ read_args "$@"
 clone_cntglx_repos
 set_workflow_file
 check_workflow
+install_wft4galaxy
 run_test
