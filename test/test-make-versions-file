@@ -97,7 +97,7 @@ function check_for_additional_grep_and_sed_commands {
 		if which -s ggrep ; then
 			GREP_COMMANDS="$GREP_COMMANDS ggrep"
 		else 
-			msg ERROR "Please install GNU grep for testing, by running 'brew tap homebrew/dupes ; brew install grep'."
+			msg ERROR "Please install GNU grep for testing, by running 'brew install grep'."
 		fi
 
 		# Add GNU sed to sed commands to test
