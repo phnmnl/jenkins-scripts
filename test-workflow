@@ -160,6 +160,12 @@ install_wft4galaxy() {
 			local virtualenv=$(which virtualenv)
 			if [[ -z $virtualenv ]] ; then
 				easy_install --user virtualenv
+
+				for python_dir in $HOME/Library/Python/* $HOME/.local ; do
+					if [ -d $python_dir ] ; then
+						export PATH="$python_dir/bin:$PATH"
+					fi
+				done
 			fi
 			virtualenv venv
 			source venv/bin/activate
