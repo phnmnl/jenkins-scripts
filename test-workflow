@@ -25,6 +25,7 @@ WFT4GALAXY_REPOS=phnmnl/$WFT4GALAXY_REPOS_NAME
 WFT4GALAXY_GITHUB=https://github.com/$WFT4GALAXY_REPOS
 WFT4GALAXY="$PWD/wft4galaxy-docker"
 WFT4GALAXY_BRANCH='develop'
+INSTALL_VIRTUALENV=$NO
 
 # Print help {{{1
 ################################################################
@@ -40,6 +41,7 @@ function print_help {
 	echo "   -k, --key                  Set Galaxy API key."
 	echo "   -s, --wft4galaxy-sources   Use GitHub sources of wft4galaxy instead of docker."
 	echo "   -u, --url                  Set Galaxy URL."
+	echo "   -v, --install-virtualenv   If virtualenv is missing, install it inside user site-package."
 	echo "   -w, --workflow             Set the workflow name to test."
 }
 
@@ -82,6 +84,7 @@ function read_args {
 			-k|--key)                   GALAXY_API_KEY="$2" ; shift_count=2 ;;
 			-s|--wft4galaxy-sources)    WFT4GALAXY_DOCKER=$NO ;;
 			-u|--url)                   GALAXY_URL="$2" ; shift_count=2 ;;
+			-v|--install-virtualenv)    INSTALL_VIRTUALENV=$YES ;;
 			-w|--name)                  WORKFLOW_NAME="$2" ; shift_count=2 ;;
 			-) error "Illegal option $1." ;;
 			--) error "Illegal option $1." ;;
@@ -153,8 +156,14 @@ install_wft4galaxy() {
 		rm -rf "$WFT4GALAXY_REPOS_NAME"
 		git clone -b "$WFT4GALAXY_BRANCH" --depth 1 --single-branch "$WFT4GALAXY_GITHUB" || error "Cloning of branch \"$WFT4GALAXY_BRANCH\" of repository \"$WFT4GALAXY_GITHUB\" failed."
 		cd "$WFT4GALAXY_REPOS_NAME"
-		virtualenv venv
-		source venv/bin/activate
+		if [[ $INSTALL_VIRTUALENV == $YES ]] ; then
+			local virtualenv=$(which virtualenv)
+			if [[ -z $virtualenv ]] ; then
+				easy_install --user virtualenv
+			fi
+			virtualenv venv
+			source venv/bin/activate
+		fi
 		pip install -r requirements.txt
 		python setup.py install
 		WFT4GALAXY=wft4galaxy
