@@ -1,0 +1,125 @@
+#!/bin/bash
+# vi: fdm=marker
+
+# Constants {{{1
+################################################################
+
+PROG_NAME=$(basename $0)
+YES=yes
+TEST_WORKFLOW=$PWD/../test-workflow
+
+# Global variables {{{1
+################################################################
+
+DEBUG=0
+
+# Msg {{{1
+################################################################
+
+msg() {
+
+	local tag=$1
+	shift
+	local code_level=1
+	is_numeric=$(echo $1 | grep '^[0-9]*$')
+	if [ -n "$is_numeric" ] ; then
+		code_level=$1
+		shift
+	fi
+	local msg=$1
+
+	# Check tag
+	if [ -z "$tag" -o \( "$tag" != INFO -a "$tag" != DEBUG -a "$tag" != ERROR \) ] ; then
+		echo "ERROR: Unvalid message tag \"$tag\"." >&2
+		exit 999
+	fi
+
+	# Print message
+	[ "$tag" = DEBUG -a "$DEBUG" -lt "$code_level" ] || echo "$tag: $msg" >&2
+
+	# Exit
+	[ $tag = ERROR ] && exit $code_level
+}
+# Msg {{{1 #
+############
+
+function msg {
+
+	local tag=$1
+	shift
+	local code_level=1
+	is_numeric=$(echo $1 | grep '^[0-9]*$')
+	if [ -n "$is_numeric" ] ; then
+		code_level=$1
+		shift
+	fi
+	local msg=$1
+
+	# Check tag
+	if [ -z "$tag" -o \( "$tag" != INFO -a "$tag" != DEBUG -a "$tag" != ERROR \) ] ; then
+		echo "ERROR: Unvalid message tag \"$tag\"." >&2
+		exit 999
+	fi
+
+	# Print message
+	[ "$tag" = DEBUG -a "$DEBUG" -lt "$code_level" ] || echo "$tag: $msg" >&2
+
+	# Exit
+	[ $tag = ERROR ] && exit $code_level
+}
+
+# Print help {{{1
+################################################################
+
+print_help() {
+	echo "Usage: $PROG_NAME [options]"
+	echo
+	echo "   -g, --debug                Debug mode."
+	echo "   -h, --help                 Print this help message."
+}
+# Read args {{{1 #
+##################
+
+function read_args {
+
+	local args="$*" # save arguments for debugging purpose
+	
+	# Read options
+	while true ; do
+		shift_count=1
+		case $1 in
+			-g|--debug)             DEBUG=$((DEBUG + 1)) ;;
+			-h|--help)              print_help ; exit 0 ;;
+			-|--|--*)               msg ERROR "Illegal option $1." ;;
+			-?)                     msg ERROR "Unknown option $1." ;;
+			-[^-]*) split_opt=$(echo $1 | sed 's/^-//' | sed 's/\([a-zA-Z]\)/ -\1/g') ; set -- $1$split_opt "${@:2}" ;;
+			*) break
+		esac
+		shift $shift_count
+	done
+	shift $((OPTIND - 1))
+
+	# Read remaining arguments
+	[ $# -eq 0 ] || msg ERROR "No remaining argument is allowed."
+
+	# Debug
+	msg DEBUG 1 "Arguments are : $args"
+}
+
+# Test W4M sacurine v2 {{{1
+################################################################
+
+test_w4m_sacurine_v2() {
+
+	# Environment variables GALAXY_URL and GALAXY_API_KEY must be set and exported.
+	$TEST_WORKFLOW -s -b testing/sacurine_v2_workflow -w w4m_sacurine_v2
+}
+
+# Main {{{1
+################################################################
+
+# Read arguments
+read_args "$@"
+
+# Run tests
+test_w4m_sacurine_v2
